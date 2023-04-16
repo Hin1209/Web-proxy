@@ -16,6 +16,7 @@ void get_filetype(char *filename, char *filetype);
 void serve_dynamic(int fd, char *filename, char *cgiargs, char *method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
                  char *longmsg);
+int is_media(char *uri);
 
 int main(int argc, char **argv)
 {
@@ -52,6 +53,7 @@ void doit(int fd)
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE];
   char filename[MAXLINE], cgiargs[MAXLINE];
   rio_t rio;
+
 
   Rio_readinitb(&rio, fd);
   Rio_readlineb(&rio, buf, MAXLINE);
@@ -117,13 +119,14 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 void read_requesthdrs(rio_t *rp)
 {
   char buf[MAXLINE];
-
+  printf("rp: %s\n", rp->rio_buf);
   Rio_readlineb(rp, buf, MAXLINE);
   while (strcmp(buf, "\r\n"))
   {
     Rio_readlineb(rp, buf, MAXLINE);
     printf("%s", buf);
   }
+  printf("hello\n");
   return;
 }
 
@@ -139,9 +142,12 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
     if (uri[strlen(uri) - 1] == '/')
       strcat(filename, "home.html");
     else
-      strcat(filename, ".html");
+		{
+			if (!is_media(uri))
+      	strcat(filename, ".html");
     return 1;
-  }
+  	}
+	}
   else
   {
     ptr = index(uri, '?');
@@ -163,6 +169,7 @@ void serve_static(int fd, char *filename, int filesize, char *method)
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
+  printf("static\n");
   get_filetype(filename, filetype);
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
   sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
@@ -172,12 +179,14 @@ void serve_static(int fd, char *filename, int filesize, char *method)
   Rio_writen(fd, buf, strlen(buf));
   printf("Response headers:\n");
   printf("%s", buf);
+  printf("header\n");
 
   if (!strcasecmp(method, "GET"))
   {
     srcfd = Open(filename, O_RDONLY, 0);
     srcp = Malloc(filesize);
     Rio_readn(srcfd, srcp, filesize);
+    printf("filesize: %d\n", filesize);
     Close(srcfd);
     Rio_writen(fd, srcp, filesize);
     free(srcp);
@@ -217,4 +226,19 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
     Execve(filename, emptylist, environ);
   }
   Wait(NULL);
+}
+
+int is_media(char *uri)
+{
+	if (strcasecmp(uri, ".mp4"))
+		return 1;
+	else if (strcasecmp(uri, ".jpg"))
+		return 1;
+	else if (strcasecmp(uri, ".png"))
+		return 1;
+	else if (strcasecmp(uri, ".jpeg"))
+		return 1;
+	else if (strcasecmp(uri, ".gif"))
+		return 1;
+	return 0;
 }
