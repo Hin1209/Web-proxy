@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <pthread.h>
 #include "csapp.h"
 
 /* Recommended max cache and object sizes */
@@ -15,7 +16,8 @@ void parse_uri(char *uri, char *host, char *port, char **path);
 
 int main(int argc, char **argv)
 {
-  int listenfd, connfd;
+  pthread_t tid;
+  int listenfd, *connfd;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
@@ -32,21 +34,24 @@ int main(int argc, char **argv)
   while (1)
   {
     clientlen = sizeof(clientaddr);
-    connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+    connfd = Malloc(sizeof(int));
+    *connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
     printf("Accepted connection from (%s, %s)\n", hostname, port);
-    doit(connfd);
-    Close(connfd);
+    Pthread_create(&tid, NULL, doit, connfd);
   }
   return 0;
 }
 
-void doit(int fd)
+void *doit(void *vargp)
 {
   int proxyfd, fd;
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE], host[MAXLINE], port[MAXLINE];
   char *srcp, *path;
   rio_t rio, rio_client;
+  fd = *((int *)vargp);
+  Pthread_detach(pthread_self());
+  Free(vargp);
 
   Rio_readinitb(&rio_client, fd);
   Rio_readlineb(&rio_client, buf, MAXLINE);
