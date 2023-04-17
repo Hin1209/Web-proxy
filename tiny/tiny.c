@@ -16,7 +16,7 @@ void get_filetype(char *filename, char *filetype);
 void serve_dynamic(int fd, char *filename, char *cgiargs, char *method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
                  char *longmsg);
-int is_media(char *uri);
+int is_file(char *uri);
 
 int main(int argc, char **argv)
 {
@@ -54,7 +54,6 @@ void doit(int fd)
   char filename[MAXLINE], cgiargs[MAXLINE];
   rio_t rio;
 
-  printf("hello\n");
   Rio_readinitb(&rio, fd);
   Rio_readlineb(&rio, buf, MAXLINE);
   printf("Reqeust headers:\n");
@@ -119,14 +118,12 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 void read_requesthdrs(rio_t *rp)
 {
   char buf[MAXLINE];
-  printf("rp: %s\n", rp->rio_buf);
   Rio_readlineb(rp, buf, MAXLINE);
   while (strcmp(buf, "\r\n"))
   {
     Rio_readlineb(rp, buf, MAXLINE);
     printf("%s", buf);
   }
-  printf("hello\n");
   return;
 }
 
@@ -143,7 +140,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
       strcat(filename, "home.html");
     else
     {
-      if (!is_media(uri))
+      if (!is_file(uri))
         strcat(filename, ".html");
       return 1;
     }
@@ -169,7 +166,6 @@ void serve_static(int fd, char *filename, int filesize, char *method)
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
-  printf("static\n");
   get_filetype(filename, filetype);
   sprintf(buf, "HTTP/1.0 200 OK\r\n");
   sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
@@ -179,7 +175,6 @@ void serve_static(int fd, char *filename, int filesize, char *method)
   Rio_writen(fd, buf, strlen(buf));
   printf("Response headers:\n");
   printf("%s", buf);
-  printf("header\n");
 
   if (!strcasecmp(method, "GET"))
   {
@@ -227,7 +222,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
   Wait(NULL);
 }
 
-int is_media(char *uri)
+int is_file(char *uri)
 {
   if (strcasecmp(uri, ".mp4"))
     return 1;
@@ -238,6 +233,8 @@ int is_media(char *uri)
   else if (strcasecmp(uri, ".jpeg"))
     return 1;
   else if (strcasecmp(uri, ".gif"))
+    return 1;
+  else if (strcasecmp(uri, ".html"))
     return 1;
   return 0;
 }
