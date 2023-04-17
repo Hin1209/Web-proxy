@@ -43,27 +43,38 @@ int main(int argc, char **argv)
 void doit(int fd)
 {
   int proxyfd, filesize, tmp, n;
-  char *host, *port, *p, buf[MAXLINE], bbuf[MAXLINE];
+  char buf[MAXLINE], bbuf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE], host[MAXLINE], port[MAXLINE];
+  char *p, *srcp, *readp, *portp, *pathp, *hostp;
   rio_t rio, rio_client;
 
-  host = "localhost";
-  port = "8000";
+  Rio_readinitb(&rio_client, fd);
+  Rio_readlineb(&rio_client, buf, MAXLINE);
+  sscanf(buf, "%s %s %s", method, uri, version);
+  portp = strchr(uri + 5, ':');
+  pathp = strchr(portp, '/');
+  int idx = 0;
+  for (char *i = portp + 1; i < pathp; i++)
+    port[idx++] = *i;
+  hostp = strchr(uri, '/');
+  hostp = hostp + 2;
+  idx = 0;
+  for (char *i = hostp; i < portp; i++)
+    host[idx++] = *i;
 
   proxyfd = Open_clientfd(host, port);
-  Rio_readinitb(&rio_client, fd);
   Rio_readinitb(&rio, proxyfd);
-  Rio_readlineb(&rio_client, buf, MAXLINE);
-  sprintf(bbuf, "%s", buf);
-  Rio_readlineb(&rio_client, buf, MAXLINE);
+  sprintf(bbuf, "%s %s HTTP/1.0\r\n", method, pathp);
   while (strcmp(buf, "\r\n"))
   {
     Rio_readlineb(&rio_client, buf, MAXLINE);
-    sprintf(bbuf, "%s%s", bbuf, buf);
+    if (strstr(buf, "User-Agent"))
+      sprintf(bbuf, "%s%s", bbuf, user_agent_hdr);
+    else
+      sprintf(bbuf, "%s%s", bbuf, buf);
   }
   Rio_writen(proxyfd, bbuf, strlen(bbuf));
   Rio_readlineb(&rio, buf, MAXLINE);
   sprintf(bbuf, "");
-  int cnt = 0;
   while (strcmp(buf, "\r\n"))
   {
     sprintf(bbuf, "%s%s", bbuf, buf);
@@ -77,12 +88,9 @@ void doit(int fd)
   sprintf(bbuf, "%s\r\n", bbuf);
   Rio_writen(fd, bbuf, strlen(bbuf));
   sprintf(bbuf, "");
-  tmp = filesize;
-  while ((n = Rio_readlineb(&rio, buf, MAXLINE)) < tmp)
-  {
-    sprintf(bbuf, "%s%s", bbuf, buf);
-    tmp -= n;
-  }
-  Rio_writen(fd, bbuf, filesize);
+  srcp = Malloc(filesize);
+  Rio_readnb(&rio, srcp, filesize);
+  Rio_writen(fd, srcp, filesize);
+  free(srcp);
   Close(proxyfd);
 }

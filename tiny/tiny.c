@@ -54,7 +54,7 @@ void doit(int fd)
   char filename[MAXLINE], cgiargs[MAXLINE];
   rio_t rio;
 
-
+  printf("hello\n");
   Rio_readinitb(&rio, fd);
   Rio_readlineb(&rio, buf, MAXLINE);
   printf("Reqeust headers:\n");
@@ -142,12 +142,12 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
     if (uri[strlen(uri) - 1] == '/')
       strcat(filename, "home.html");
     else
-		{
-			if (!is_media(uri))
-      	strcat(filename, ".html");
-    return 1;
-  	}
-	}
+    {
+      if (!is_media(uri))
+        strcat(filename, ".html");
+      return 1;
+    }
+  }
   else
   {
     ptr = index(uri, '?');
@@ -186,7 +186,6 @@ void serve_static(int fd, char *filename, int filesize, char *method)
     srcfd = Open(filename, O_RDONLY, 0);
     srcp = Malloc(filesize);
     Rio_readn(srcfd, srcp, filesize);
-    printf("filesize: %d\n", filesize);
     Close(srcfd);
     Rio_writen(fd, srcp, filesize);
     free(srcp);
@@ -230,15 +229,15 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
 
 int is_media(char *uri)
 {
-	if (strcasecmp(uri, ".mp4"))
-		return 1;
-	else if (strcasecmp(uri, ".jpg"))
-		return 1;
-	else if (strcasecmp(uri, ".png"))
-		return 1;
-	else if (strcasecmp(uri, ".jpeg"))
-		return 1;
-	else if (strcasecmp(uri, ".gif"))
-		return 1;
-	return 0;
+  if (strcasecmp(uri, ".mp4"))
+    return 1;
+  else if (strcasecmp(uri, ".jpg"))
+    return 1;
+  else if (strcasecmp(uri, ".png"))
+    return 1;
+  else if (strcasecmp(uri, ".jpeg"))
+    return 1;
+  else if (strcasecmp(uri, ".gif"))
+    return 1;
+  return 0;
 }
